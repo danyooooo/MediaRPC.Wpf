@@ -1,4 +1,4 @@
-# MediaRPC
+# MediaRPC.Wpf
 
 A minimal Windows application that displays your currently playing media on Discord Rich Presence using the Windows SMTC (System Media Transport Controls) API.
 
