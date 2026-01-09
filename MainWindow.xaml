@@ -1,0 +1,133 @@
+<Window x:Class="MediaRPC.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:tb="http://www.hardcodet.net/taskbar"
+        Title="MediaRPC" 
+        Height="420" Width="360"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}"
+        WindowStartupLocation="CenterScreen"
+        Closing="Window_Closing">
+    
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="MediaRPC" 
+                   FontSize="24" 
+                   FontWeight="Bold"
+                   Foreground="{StaticResource TextBrush}"
+                   Margin="0,0,0,16"/>
+
+        <!-- Media Info Display -->
+        <Border Grid.Row="1" 
+                Background="{StaticResource SurfaceBrush}" 
+                CornerRadius="12"
+                Padding="16"
+                Margin="0,0,0,16">
+            <Grid>
+                <!-- Media Playing Panel - Centered Layout -->
+                <StackPanel x:Name="MediaInfoPanel" 
+                            Visibility="Collapsed"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                    
+                    <!-- Centered Thumbnail -->
+                    <Border CornerRadius="8" 
+                            MaxWidth="200" MaxHeight="120"
+                            MinWidth="80" MinHeight="80"
+                            HorizontalAlignment="Center"
+                            Background="#3D3D4D"
+                            Margin="0,0,0,12"
+                            ClipToBounds="True">
+                        <Grid>
+                            <TextBlock Text="🎵" 
+                                       FontSize="28" 
+                                       HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center"
+                                       x:Name="NoThumbnailIcon"/>
+                            <Image x:Name="ThumbnailImage" 
+                                   Stretch="Uniform"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Centered Title -->
+                    <TextBlock x:Name="TitleText"
+                               HorizontalAlignment="Center" 
+                               TextAlignment="Center"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="280"
+                               FontSize="15" 
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextBrush}"
+                               Text="Song Title"/>
+                    
+                    <!-- Centered Artist -->
+                    <TextBlock x:Name="ArtistText"
+                               HorizontalAlignment="Center" 
+                               TextAlignment="Center"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="280"
+                               Margin="0,4,0,0"
+                               FontSize="13"
+                               Foreground="{StaticResource SubtextBrush}"
+                               Text="Artist Name"/>
+                </StackPanel>
+                
+                <!-- No Media Panel -->
+                <StackPanel x:Name="NoMediaPanel" 
+                            VerticalAlignment="Center" 
+                            HorizontalAlignment="Center">
+                    <TextBlock Text="🎵" 
+                               FontSize="36" 
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="No media playing" 
+                               FontSize="14"
+                               Foreground="{StaticResource SubtextBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Connect/Disconnect Button -->
+        <Button x:Name="ConnectButton"
+                Grid.Row="2"
+                Content="Connect"
+                Style="{StaticResource PrimaryButtonStyle}"
+                Click="ConnectButton_Click"
+                Margin="0,0,0,16"/>
+
+        <!-- Run at Startup Checkbox -->
+        <CheckBox x:Name="StartupCheckBox"
+                  Grid.Row="3"
+                  Content="Run at startup"
+                  Style="{StaticResource ModernCheckBoxStyle}"
+                  Checked="StartupCheckBox_Changed"
+                  Unchecked="StartupCheckBox_Changed"/>
+
+        <!-- System Tray Icon -->
+        <tb:TaskbarIcon x:Name="TrayIcon"
+                        IconSource="pack://application:,,,/app.ico"
+                        ToolTipText="MediaRPC"
+                        TrayMouseDoubleClick="TrayIcon_TrayMouseDoubleClick">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Show" Click="ShowMenuItem_Click"/>
+                    <Separator/>
+                    <MenuItem Header="Exit" Click="ExitMenuItem_Click"/>
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+    </Grid>
+</Window>
