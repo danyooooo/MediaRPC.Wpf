@@ -37,15 +37,21 @@ public partial class MainWindow : Window
         // Subscribe to events
         _mediaService.MediaInfoChanged += OnMediaInfoChanged;
         _discordService.ConnectionStateChanged += OnConnectionStateChanged;
+        _discordService.DiscordRunningStateChanged += OnDiscordRunningStateChanged;
 
         // Initialize media session monitoring
         await _mediaService.InitializeAsync();
 
+        // Start Discord monitoring with auto-connect if startup mode or setting enabled
+        var autoConnect = App.IsStartupMode || _settingsService.RunAtStartup;
+        _discordService.StartDiscordMonitoring(autoConnect);
+        
+        // Update button state based on Discord availability
+        UpdateConnectButtonState();
+
         // Handle startup mode
         if (App.IsStartupMode)
         {
-            // Auto-connect and start hidden
-            _discordService.Connect();
             Hide();
         }
     }
@@ -107,8 +113,41 @@ public partial class MainWindow : Window
     {
         Dispatcher.Invoke(() =>
         {
-            ConnectButton.Content = isConnected ? "Disconnect" : "Connect";
+            UpdateConnectButtonState();
+            
+            // If just connected, immediately update presence with current media
+            if (isConnected && _mediaService.CurrentMedia != null)
+            {
+                _discordService.UpdatePresence(_mediaService.CurrentMedia);
+            }
         });
+    }
+
+    private void OnDiscordRunningStateChanged(object? sender, bool isRunning)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            UpdateConnectButtonState();
+        });
+    }
+
+    private void UpdateConnectButtonState()
+    {
+        if (!_discordService.IsDiscordRunning)
+        {
+            ConnectButton.Content = "Discord Not Running";
+            ConnectButton.IsEnabled = false;
+        }
+        else if (_discordService.IsConnected)
+        {
+            ConnectButton.Content = "Disconnect";
+            ConnectButton.IsEnabled = true;
+        }
+        else
+        {
+            ConnectButton.Content = "Connect";
+            ConnectButton.IsEnabled = true;
+        }
     }
 
     private void ConnectButton_Click(object sender, RoutedEventArgs e)
@@ -120,8 +159,6 @@ public partial class MainWindow : Window
         else
         {
             _discordService.Connect();
-            // Immediately update presence with current media
-            _discordService.UpdatePresence(_mediaService.CurrentMedia);
         }
     }
 
@@ -130,6 +167,10 @@ public partial class MainWindow : Window
         var isChecked = StartupCheckBox.IsChecked == true;
         _settingsService.RunAtStartup = isChecked;
         _startupService.IsEnabled = isChecked;
+        
+        // Update Discord monitoring auto-connect based on new setting
+        _discordService.StopDiscordMonitoring();
+        _discordService.StartDiscordMonitoring(isChecked);
     }
 
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
