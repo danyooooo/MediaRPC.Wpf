@@ -3,6 +3,7 @@ using MediaRPC.Services;
 using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Linq;
 
 namespace MediaRPC;
 
@@ -11,6 +12,8 @@ namespace MediaRPC;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private readonly ExtensionBridgeService _bridgeService;
+    private readonly ExtensionMediaProvider _extensionProvider;
     private readonly MediaSessionService _mediaService;
     private readonly DiscordRpcService _discordService;
     private readonly SettingsService _settingsService;
@@ -21,6 +24,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         
+        _bridgeService = new ExtensionBridgeService();
+        _extensionProvider = new ExtensionMediaProvider(_bridgeService);
         _mediaService = new MediaSessionService();
         _discordService = new DiscordRpcService();
         _settingsService = new SettingsService();
@@ -34,12 +39,21 @@ public partial class MainWindow : Window
         // Load settings
         StartupCheckBox.IsChecked = _settingsService.RunAtStartup;
 
+        if (_settingsService.UseDynamicDomainLayout)
+            DynamicLayoutRadio.IsChecked = true;
+        else
+            ClassicLayoutRadio.IsChecked = true;
+
+        _discordService.UseDynamicDomainLayout = _settingsService.UseDynamicDomainLayout;
+
         // Subscribe to events
-        _mediaService.MediaInfoChanged += OnMediaInfoChanged;
+        _extensionProvider.AllMediaChanged += OnAnyMediaChanged;
+        _mediaService.AllMediaChanged += OnAnyMediaChanged;
         _discordService.ConnectionStateChanged += OnConnectionStateChanged;
         _discordService.DiscordRunningStateChanged += OnDiscordRunningStateChanged;
 
         // Initialize media session monitoring
+        _bridgeService.StartListening();
         await _mediaService.InitializeAsync();
 
         // Start Discord monitoring with auto-connect if startup mode or setting enabled
@@ -56,34 +70,110 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnMediaInfoChanged(object? sender, MediaInfo? mediaInfo)
+    private void OnAnyMediaChanged(object? sender, EventArgs e)
     {
-        Dispatcher.Invoke(() =>
+        Dispatcher.Invoke(UpdateUIAndDiscord);
+    }
+
+    private void UpdateUIAndDiscord()
+    {
+        // Decide active media: Extension beats SMTC
+        var activeMedia = _extensionProvider.CurrentMedia ?? _mediaService.CurrentMedia;
+
+        if (activeMedia == null)
         {
-            if (mediaInfo == null)
+            MediaInfoPanel.Visibility = Visibility.Collapsed;
+            ConcurrentSessionsPanel.Visibility = Visibility.Collapsed;
+            NoMediaPanel.Visibility = Visibility.Visible;
+            _discordService.UpdatePresence(null);
+            return;
+        }
+
+        MediaInfoPanel.Visibility = Visibility.Visible;
+        NoMediaPanel.Visibility = Visibility.Collapsed;
+
+        TitleText.Text = activeMedia.Title;
+        ArtistText.Text = activeMedia.Artist;
+        SourceText.Text = string.IsNullOrEmpty(activeMedia.Url) ? "Local Device" : activeMedia.Url;
+        SourceText.Visibility = string.IsNullOrEmpty(activeMedia.Url) ? Visibility.Collapsed : Visibility.Visible;
+
+        if (!string.IsNullOrEmpty(activeMedia.Url) && System.Uri.TryCreate(activeMedia.Url, System.UriKind.Absolute, out var uri))
+        {
+            DomainText.Text = uri.Host.StartsWith("www.") ? uri.Host.Substring(4) : uri.Host;
+            DomainText.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            DomainText.Visibility = Visibility.Collapsed;
+        }
+
+        if (activeMedia.Duration.HasValue && activeMedia.Duration.Value.TotalSeconds > 0)
+        {
+            TimePanel.Visibility = Visibility.Visible;
+            if (activeMedia.Position.HasValue)
             {
-                MediaInfoPanel.Visibility = Visibility.Collapsed;
-                NoMediaPanel.Visibility = Visibility.Visible;
+                TimeText.Text = $"{(int)activeMedia.Position.Value.TotalMinutes}:{activeMedia.Position.Value.Seconds:D2} / {(int)activeMedia.Duration.Value.TotalMinutes}:{activeMedia.Duration.Value.Seconds:D2}";
+                TimeBar.Maximum = activeMedia.Duration.Value.TotalSeconds;
+                TimeBar.Value = activeMedia.Position.Value.TotalSeconds;
             }
             else
             {
-                MediaInfoPanel.Visibility = Visibility.Visible;
-                NoMediaPanel.Visibility = Visibility.Collapsed;
-
-                TitleText.Text = mediaInfo.Title;
-                ArtistText.Text = mediaInfo.Artist;
-
-                // Update thumbnail
-                UpdateThumbnail(mediaInfo.Thumbnail);
+                TimeText.Text = $"0:00 / {(int)activeMedia.Duration.Value.TotalMinutes}:{activeMedia.Duration.Value.Seconds:D2}";
+                TimeBar.Maximum = activeMedia.Duration.Value.TotalSeconds;
+                TimeBar.Value = 0;
             }
+        }
+        else
+        {
+            TimePanel.Visibility = Visibility.Collapsed;
+        }
 
-            // Update Discord presence
-            _discordService.UpdatePresence(mediaInfo);
-        });
+        // Update thumbnail
+        UpdateThumbnail(activeMedia.ArtworkUrl, activeMedia.Thumbnail);
+
+        // Build list of other concurrent sessions
+        var allSessions = new System.Collections.Generic.List<MediaInfo>();
+        allSessions.AddRange(_extensionProvider.AllMedia);
+        allSessions.AddRange(_mediaService.AllMedia);
+
+        // Exclude the active one
+        var others = allSessions.Where(m => m != activeMedia).ToList();
+        if (others.Count > 0)
+        {
+            ConcurrentSessionsPanel.Visibility = Visibility.Visible;
+            ConcurrentSessionsList.ItemsSource = others;
+        }
+        else
+        {
+            ConcurrentSessionsPanel.Visibility = Visibility.Collapsed;
+        }
+
+        // Update Discord presence with the ACTIVE session ONLY
+        _discordService.UpdatePresence(activeMedia);
     }
 
-    private void UpdateThumbnail(byte[]? thumbnailBytes)
+    private void UpdateThumbnail(string? artworkUrl, byte[]? thumbnailBytes)
     {
+        if (!string.IsNullOrEmpty(artworkUrl))
+        {
+            try
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(artworkUrl);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                
+                ThumbnailImage.Source = bitmap;
+                NoThumbnailIcon.Visibility = Visibility.Collapsed;
+                return;
+            }
+            catch
+            {
+                // Fall through to memory stream or placeholder
+            }
+        }
+
         if (thumbnailBytes != null && thumbnailBytes.Length > 0)
         {
             try
@@ -173,6 +263,18 @@ public partial class MainWindow : Window
         _discordService.StartDiscordMonitoring(isChecked);
     }
 
+    private void LayoutRadio_Checked(object sender, RoutedEventArgs e)
+    {
+        if (ClassicLayoutRadio == null || DynamicLayoutRadio == null) return;
+
+        bool useDynamic = DynamicLayoutRadio.IsChecked == true;
+        _settingsService.UseDynamicDomainLayout = useDynamic;
+        _discordService.UseDynamicDomainLayout = useDynamic;
+
+        // Push update immediately
+        Dispatcher.Invoke(UpdateUIAndDiscord);
+    }
+
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
         if (!_isExiting)
@@ -184,6 +286,8 @@ public partial class MainWindow : Window
         else
         {
             // Actually closing - clean up
+            _extensionProvider.Dispose();
+            _bridgeService.Dispose();
             _mediaService.Dispose();
             _discordService.Dispose();
             TrayIcon.Dispose();

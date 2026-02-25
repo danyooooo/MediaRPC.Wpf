@@ -38,6 +38,19 @@ public class SettingsService
         }
     }
 
+    public bool UseDynamicDomainLayout
+    {
+        get => _settings.UseDynamicDomainLayout;
+        set
+        {
+            if (_settings.UseDynamicDomainLayout != value)
+            {
+                _settings.UseDynamicDomainLayout = value;
+                Save();
+            }
+        }
+    }
+
     private AppSettings Load()
     {
         try

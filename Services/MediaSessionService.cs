@@ -7,7 +7,7 @@ namespace MediaRPC.Services;
 /// <summary>
 /// Service that monitors system media sessions via Windows SMTC API.
 /// </summary>
-public class MediaSessionService : IDisposable
+public class MediaSessionService : IMediaProvider
 {
     private GlobalSystemMediaTransportControlsSessionManager? _sessionManager;
     private GlobalSystemMediaTransportControlsSession? _currentSession;
@@ -15,8 +15,14 @@ public class MediaSessionService : IDisposable
     private bool _disposed;
 
     public event EventHandler<MediaInfo?>? MediaInfoChanged;
+    public event EventHandler? AllMediaChanged;
 
     public MediaInfo? CurrentMedia { get; private set; }
+    
+    public System.Collections.Generic.IReadOnlyList<MediaInfo> AllMedia => 
+        CurrentMedia != null ? new[] { CurrentMedia } : Array.Empty<MediaInfo>();
+
+    public string ProviderName => "SMTC";
 
     public async Task InitializeAsync()
     {
@@ -106,12 +112,14 @@ public class MediaSessionService : IDisposable
             // Always fire event to keep UI and RPC in sync
             CurrentMedia = newMedia;
             MediaInfoChanged?.Invoke(this, newMedia);
+            AllMediaChanged?.Invoke(this, EventArgs.Empty);
         }
         catch
         {
             // Session may have been disposed
             CurrentMedia = null;
             MediaInfoChanged?.Invoke(this, null);
+            AllMediaChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 

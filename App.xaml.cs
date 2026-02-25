@@ -32,6 +32,7 @@ public partial class App : Application
         base.OnStartup(e);
     }
 
+
     protected override void OnExit(ExitEventArgs e)
     {
         _mutex?.ReleaseMutex();

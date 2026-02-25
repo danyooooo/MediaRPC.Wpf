@@ -26,6 +26,8 @@ public class DiscordRpcService : IDisposable
     private bool _autoConnectEnabled;
     private MediaInfo? _lastMediaInfo;
 
+    public bool UseDynamicDomainLayout { get; set; } = false;
+
     public bool IsConnected => _client?.IsInitialized == true && _client?.IsDisposed == false;
     public bool IsDiscordRunning => CheckDiscordRunning();
 
@@ -264,16 +266,81 @@ public class DiscordRpcService : IDisposable
         // Cache thumbnail
         CacheThumbnail(mediaInfo.Thumbnail);
 
-        // Truncate strings if too long (Discord limits)
-        var details = Truncate(mediaInfo.Title, 128);
-        var state = Truncate($"by {mediaInfo.Artist}", 128);
-
-        var presence = new RichPresence
+        // Precalculate timestamps
+        Timestamps? timestamps = null;
+        if (mediaInfo.Duration.HasValue && mediaInfo.Duration.Value.TotalSeconds > 0)
         {
-            Type = ActivityType.Listening,
-            Details = details,
-            State = state
-        };
+            var now = DateTime.UtcNow;
+            var position = mediaInfo.Position ?? TimeSpan.Zero;
+            
+            timestamps = new Timestamps
+            {
+                Start = now - position,
+                End = now + (mediaInfo.Duration.Value - position)
+            };
+        }
+
+        // Domain extraction and button setup
+        string domainName = "Music";
+        Button[]? buttons = null;
+
+        if (!string.IsNullOrEmpty(mediaInfo.Url) && System.Uri.TryCreate(mediaInfo.Url, System.UriKind.Absolute, out var uri))
+        {
+            domainName = uri.Host.StartsWith("www.") ? uri.Host.Substring(4) : uri.Host;
+            buttons = new[]
+            {
+                new Button { Label = "Open Link", Url = mediaInfo.Url }
+            };
+        }
+
+        RichPresence presence;
+
+        if (UseDynamicDomainLayout)
+        {
+            // Improved / Dynamic Layout
+            var detailsStr = string.IsNullOrWhiteSpace(mediaInfo.Artist) 
+                ? mediaInfo.Title 
+                : $"{mediaInfo.Title} by {mediaInfo.Artist}";
+            var dynamicDetails = Truncate(detailsStr, 128);
+            var hoverText = Truncate(mediaInfo.Title, 128);
+            var state = Truncate(domainName, 128);
+
+            presence = new RichPresence
+            {
+                Type = ActivityType.Listening,
+                StatusDisplay = StatusDisplayType.State,
+                Details = dynamicDetails,
+                State = state,
+                Timestamps = timestamps,
+                Buttons = buttons,
+                Assets = new Assets
+                {
+                    LargeImageKey = !string.IsNullOrEmpty(mediaInfo.ArtworkUrl) ? mediaInfo.ArtworkUrl : "logo",
+                    LargeImageText = hoverText
+                }
+            };
+        }
+        else
+        {
+            // Classic Layout
+            var classicDetails = Truncate(mediaInfo.Title, 128);
+            var stateStr = string.IsNullOrWhiteSpace(mediaInfo.Artist) ? "" : $"by {mediaInfo.Artist}";
+            var classicState = Truncate(stateStr, 128);
+
+            presence = new RichPresence
+            {
+                Type = ActivityType.Listening,
+                Details = classicDetails,
+                State = string.IsNullOrEmpty(classicState) ? null : classicState,
+                Timestamps = timestamps,
+                Buttons = buttons,
+                Assets = new Assets
+                {
+                    LargeImageKey = !string.IsNullOrEmpty(mediaInfo.ArtworkUrl) ? mediaInfo.ArtworkUrl : "logo",
+                    LargeImageText = domainName
+                }
+            };
+        }
 
         try
         {

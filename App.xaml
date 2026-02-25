@@ -90,6 +90,45 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            <!-- RadioButton Style -->
+            <Style x:Key="ModernRadioButtonStyle" TargetType="RadioButton">
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="RadioBorder" 
+                                        Width="20" Height="20" 
+                                        CornerRadius="10"
+                                        BorderBrush="{StaticResource SubtextBrush}"
+                                        BorderThickness="2"
+                                        Background="Transparent"
+                                        Margin="0,0,10,0">
+                                    <Ellipse x:Name="RadioMark" 
+                                             Width="10" Height="10"
+                                             Fill="{StaticResource PrimaryBrush}"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             Visibility="Collapsed"/>
+                                </Border>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="RadioBorder" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                    <Setter TargetName="RadioMark" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="RadioBorder" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

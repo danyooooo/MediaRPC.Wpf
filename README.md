@@ -1,66 +1,56 @@
 # MediaRPC
 
-A minimal Windows application that displays your currently playing media on Discord Rich Presence using the Windows SMTC (System Media Transport Controls) API.
+A minimal Windows application and companion browser extension that displays your exact media playback on Discord Rich Presence. 
 
-![MediaRPC Screenshot](screenshot.png)
+<div align="center">
+  <img src="screenshot_app.png" width="300" alt="MediaRPC App Interface" />
+  <img src="screenshot_profile.png" width="280" alt="Discord Profile Classic" />
+  <img src="screenshot_vc.png" width="280" alt="Discord VC Display" />
+</div>
+
+Unlike standard SMTC-based (System Media Transport Controls) apps that only pull basic metadata, MediaRPC uses a custom WebSocket browser extension to extract full media data directly from the official Media Session API. This allows it to synchronize live playback duration timestamps, extract beautiful high-resolution album artwork, display the source domain, and construct direct "Open Link" action buttons right in your Discord status!
 
 ## Features
 
-- 🎵 **SMTC Integration** - Intercepts media metadata from browsers and desktop apps
-- 💬 **Discord Rich Presence** - Shows "Listening to [Title] by [Artist]" on your Discord status
-- 🖼️ **Album Art Display** - Shows thumbnail in the app with marquee scrolling for long titles
-- 🔄 **Auto-Connect** - Automatically connects when Discord starts and disconnects when it closes
-- 🚀 **Run at Startup** - Optional auto-start with Windows (starts minimized and auto-connects)
-- 📌 **System Tray** - Minimizes to tray on close, exit via right-click menu
-- 🔒 **Single Instance** - Prevents multiple instances from running
+- 🌐 **Full Extension Integration** - Uses a zero-install, unpacked Chrome/Edge extension to safely pipe native browser media over local WebSockets.
+- 💬 **Discord Rich Presence** - Shows what you are listening to on your Discord status.
+- 🎨 **Two Unique Layouts** - Instantly toggle between:
+  - **Classic**: The traditional `"Listening to Music"` header.
+  - **Dynamic**: A custom header that cleanly displays the specific source domain (`"Listening to youtube.com"`).
+- ⏱️ **Live Timeline Sync** - Perfect duration progress bar visually ticking inside your Discord presence.
+- 🔗 **Actionable "Open Link" Button** - Automatically adds a clickable button to your Discord profile so friends can instantly tune in with you.
+- 🖼️ **WPF Desktop UI** - A sleek, modern dashboard that displays current play state, artwork, local playback progress, and a list of your other concurrent media sessions.
+- 🔄 **Auto-Connect** - Automatically detects when Discord starts, connects, and elegantly disconnects when you close it.
 
 ## Requirements
 
 - Windows 10/11
 - .NET 8.0 Runtime
 - Discord Desktop App
+- Chromium-based Browser (Chrome, Edge, Brave, etc.)
 
-## Installation
+## Installation & Setup
 
-### From Release
-1. Download the latest release
-2. Extract and run `MediaRPC.exe`
-
-### Build from Source
+### 1. Build and Run the App
 ```powershell
 git clone https://github.com/danyooooo/MediaRPC.Wpf.git
 cd MediaRPC.Wpf
 dotnet build -c Release
 ```
+*Run the `MediaRPC.exe`. The application automatically spins up a local WebSocket listener.*
 
-### Publish Single-File Executable
-```powershell
-dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./publish
-```
-
-## Usage
-
-1. **Launch the app** - The main window shows currently playing media
-2. **Wait for Discord** - Button shows "Discord Not Running" if Discord isn't open
-3. **Click "Connect"** - Enables Discord Rich Presence (auto-connects if "Run at startup" is enabled)
-4. **Play media** - Any browser or desktop app with SMTC support will be detected
-5. **Check "Run at startup"** - App will auto-start minimized and auto-connect when Discord is running
-
-### Auto-Connect Behavior
-- App monitors Discord.exe process status
-- Automatically connects when Discord starts
-- Automatically disconnects when Discord closes
-- UI updates in real-time to show Discord status
-
-### Supported Media Sources
-- Any browser with Media Session API (Chrome, Edge, Firefox, etc.)
-- Spotify, Windows Media Player, VLC, and other SMTC-enabled apps
+### 2. Install the Browser Extension
+1. Open your Chromium browser (Chrome/Edge) and navigate to the Extensions page (`chrome://extensions/` or `edge://extensions/`).
+2. Enable **Developer mode** in the top right corner.
+3. Click **Load unpacked**.
+4. Select the `ChromeExtension` folder located inside your cloned `MediaRPC` directory.
+5. *Done! The extension will automatically connect to the WPF app via WebSockets. No native messaging registry hacks required!*
 
 ## Configuration
 
 Settings and cache are stored in `%APPDATA%\MediaRPC\`:
-- `settings.json` - Application settings
-- `cache.png` - Cached thumbnail (temporary)
+- `settings.json` - Application settings (Startup behavior and selected Discord Layout).
+- `cache.png` - Cached thumbnail (temporary, used to push high-res artwork to Discord).
 
 ## Tech Stack
 
@@ -71,4 +61,4 @@ Settings and cache are stored in `%APPDATA%\MediaRPC\`:
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details
+GNU General Public License v3.0 - see [LICENSE](LICENSE) for details

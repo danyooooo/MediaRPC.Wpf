@@ -7,5 +7,9 @@ public record MediaInfo(
     string Title,
     string Artist,
     bool IsPlaying,
-    byte[]? Thumbnail
+    byte[]? Thumbnail,
+    string? Url = null,
+    string? ArtworkUrl = null,
+    TimeSpan? Duration = null,
+    TimeSpan? Position = null
 );

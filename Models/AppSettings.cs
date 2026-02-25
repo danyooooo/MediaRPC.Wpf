@@ -6,4 +6,5 @@ namespace MediaRPC.Models;
 public class AppSettings
 {
     public bool RunAtStartup { get; set; }
+    public bool UseDynamicDomainLayout { get; set; } = false;
 }

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:tb="http://www.hardcodet.net/taskbar"
         Title="MediaRPC" 
-        Height="450" Width="360"
+        Height="800" Width="600"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="{StaticResource BackgroundBrush}"
@@ -14,6 +14,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -33,12 +34,30 @@
                 Padding="16"
                 Margin="0,0,0,16">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
                 <!-- Media Playing Panel - Centered Layout -->
                 <StackPanel x:Name="MediaInfoPanel" 
+                            Grid.Row="0"
                             Visibility="Collapsed"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center">
                     
+                    <!-- Source Domain -->
+                    <TextBlock x:Name="DomainText"
+                               HorizontalAlignment="Center" 
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="280"
+                               Margin="0,0,0,12"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource SubtextBrush}"
+                               Text="domain.com"/>
+
                     <!-- Centered Thumbnail -->
                     <Border CornerRadius="8" 
                             MaxWidth="200" MaxHeight="120"
@@ -65,7 +84,7 @@
                                TextAlignment="Center"
                                TextWrapping="Wrap"
                                MaxWidth="280"
-                               FontSize="15" 
+                               FontSize="20" 
                                FontWeight="SemiBold"
                                Foreground="{StaticResource TextBrush}"
                                Text="Song Title"/>
@@ -77,13 +96,83 @@
                                TextWrapping="Wrap"
                                MaxWidth="280"
                                Margin="0,6,0,0"
-                               FontSize="13"
+                               FontSize="16"
                                Foreground="{StaticResource SubtextBrush}"
                                Text="Artist Name"/>
+                               
+                    <!-- Source URL -->
+                    <TextBlock x:Name="SourceText"
+                               HorizontalAlignment="Center" 
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="280"
+                               Margin="0,8,0,0"
+                               FontSize="14"
+                               Foreground="{StaticResource SubtextBrush}"
+                               Text="Source"/>
+                               
+                    <!-- Duration / Position -->
+                    <StackPanel x:Name="TimePanel" Margin="0,12,0,0" Width="280">
+                        <TextBlock x:Name="TimeText"
+                                   HorizontalAlignment="Center" 
+                                   TextAlignment="Center"
+                                   FontSize="13"
+                                   Foreground="{StaticResource SubtextBrush}"
+                                   Text="0:00 / 0:00"/>
+                        <ProgressBar x:Name="TimeBar" 
+                                     Height="4" 
+                                     Margin="0,8,0,0"
+                                     BorderThickness="0"
+                                     Background="#3D3D4D"
+                                     Foreground="#5865F2"
+                                     Maximum="100" 
+                                     Value="0"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <!-- Concurrent Sessions List -->
+                <StackPanel x:Name="ConcurrentSessionsPanel"
+                            Grid.Row="1"
+                            Visibility="Collapsed"
+                            Margin="0,16,0,0">
+                    <TextBlock Text="Other Active Sessions"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource SubtextBrush}"
+                               Margin="0,0,0,8"/>
+                    <ItemsControl x:Name="ConcurrentSessionsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1AFFFFFF" CornerRadius="4" Padding="8" Margin="0,0,0,4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" 
+                                                       FontSize="12" 
+                                                       FontWeight="SemiBold" 
+                                                       TextWrapping="Wrap" 
+                                                       MaxHeight="36" 
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Artist}" 
+                                                       FontSize="11" 
+                                                       Foreground="{StaticResource SubtextBrush}" 
+                                                       TextWrapping="Wrap" 
+                                                       MaxHeight="30" 
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
                 
                 <!-- No Media Panel -->
                 <StackPanel x:Name="NoMediaPanel" 
+                            Grid.Row="0"
                             VerticalAlignment="Center" 
                             HorizontalAlignment="Center">
                     <TextBlock Text="🎵" 
@@ -112,7 +201,15 @@
                   Content="Run at startup"
                   Style="{StaticResource ModernCheckBoxStyle}"
                   Checked="StartupCheckBox_Changed"
-                  Unchecked="StartupCheckBox_Changed"/>
+                  Unchecked="StartupCheckBox_Changed"
+                  Margin="0,0,0,16"/>
+
+        <!-- RPC Layout Options -->
+        <StackPanel Grid.Row="4">
+            <TextBlock Text="Discord Profile Layout" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" Margin="0,0,0,8"/>
+            <RadioButton x:Name="ClassicLayoutRadio" Content="Classic (Listening to Music)" Style="{StaticResource ModernRadioButtonStyle}" Checked="LayoutRadio_Checked"/>
+            <RadioButton x:Name="DynamicLayoutRadio" Content="Dynamic (Listening to Domain)" Style="{StaticResource ModernRadioButtonStyle}" Checked="LayoutRadio_Checked" Margin="0,8,0,0"/>
+        </StackPanel>
 
         <!-- System Tray Icon -->
         <tb:TaskbarIcon x:Name="TrayIcon"
