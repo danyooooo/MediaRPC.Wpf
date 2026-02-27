@@ -94,7 +94,26 @@
         }
     });
 
+    // Seed initial state just in case it was already playing before we injected
+    if (navigator.mediaSession.metadata) {
+        currentMetadata = navigator.mediaSession.metadata;
+    }
+    if (navigator.mediaSession.playbackState) {
+        currentPlaybackState = navigator.mediaSession.playbackState;
+    }
+
     setInterval(() => {
+        // Attempt to guess playback state if the page didn't explicitly set it to 'playing'
+        // (Some pages construct a media session but fail to update playbackState)
+        const media = document.querySelector('video, audio');
+        if (media && !isNaN(media.duration) && !isNaN(media.currentTime)) {
+            if (!media.paused && currentPlaybackState !== 'playing') {
+                currentPlaybackState = 'playing';
+            } else if (media.paused && currentPlaybackState === 'playing') {
+                currentPlaybackState = 'paused';
+            }
+        }
+
         if (currentPlaybackState === 'playing') {
             // Try updating from standard API first
             try {
@@ -111,7 +130,6 @@
             } catch (e) { }
 
             // Accurate live fallback via media element
-            const media = document.querySelector('video, audio');
             if (media && !isNaN(media.duration) && !isNaN(media.currentTime)) {
                 currentPositionState = {
                     duration: media.duration || currentPositionState.duration || 0,

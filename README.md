@@ -46,6 +46,8 @@ dotnet build -c Release
 4. Select the `ChromeExtension` folder located inside your cloned `MediaRPC` directory.
 5. *Done! The extension will automatically connect to the WPF app via WebSockets. No native messaging registry hacks required!*
 
+> ⚠️ **Note on Incognito Mode:** If you enable "Allow in incognito" for the extension, you **must restart your browser** for it to properly take effect. Otherwise, the extension will encounter a "context invalidated" error and fail to connect until restarting.
+
 ## Configuration
 
 Settings and cache are stored in `%APPDATA%\MediaRPC\`:

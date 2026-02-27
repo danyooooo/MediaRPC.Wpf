@@ -85,6 +85,7 @@ public class ExtensionMediaProvider : IMediaProvider
         
         double posSec = info.TryGetProperty("position", out var p) ? p.GetDouble() : 0;
         double durSec = info.TryGetProperty("duration", out var d) ? d.GetDouble() : 0;
+        string sessionMode = data.TryGetProperty("sessionMode", out var sm) ? sm.GetString() ?? "normal" : "normal";
 
         string? artworkUrl = info.GetProperty("artwork").ValueKind == JsonValueKind.String 
             ? info.GetProperty("artwork").GetString() 
@@ -98,7 +99,8 @@ public class ExtensionMediaProvider : IMediaProvider
             Url: url,
             ArtworkUrl: artworkUrl,
             Duration: durSec > 0 ? TimeSpan.FromSeconds(durSec) : null,
-            Position: posSec > 0 ? TimeSpan.FromSeconds(posSec) : null
+            Position: posSec > 0 ? TimeSpan.FromSeconds(posSec) : null,
+            SessionMode: sessionMode
         );
 
         // Store session

@@ -77,8 +77,20 @@ public partial class MainWindow : Window
 
     private void UpdateUIAndDiscord()
     {
-        // Decide active media: Extension beats SMTC
-        var activeMedia = _extensionProvider.CurrentMedia ?? _mediaService.CurrentMedia;
+        // Decide active media: prioritize whatever is currently playing
+        var extMedia = _extensionProvider.CurrentMedia;
+        var smtcMedia = _mediaService.CurrentMedia;
+
+        MediaInfo? activeMedia = null;
+
+        if (extMedia != null && extMedia.IsPlaying)
+            activeMedia = extMedia; // Extension is playing, priority #1
+        else if (smtcMedia != null && smtcMedia.IsPlaying)
+            activeMedia = smtcMedia; // SMTC is playing, priority #2
+        else if (extMedia != null)
+            activeMedia = extMedia; // Extension is paused, priority #3
+        else
+            activeMedia = smtcMedia; // SMTC is paused or null, priority #4
 
         if (activeMedia == null)
         {

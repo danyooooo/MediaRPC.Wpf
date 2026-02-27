@@ -3,6 +3,17 @@
 const WS_URL = "ws://127.0.0.1:8765/";
 let ws = null;
 let reconnectTimer = null;
+let messageQueue = [];
+
+let sessionMode = 'normal';
+(async () => {
+    if (typeof chrome !== 'undefined' && chrome.extension?.inIncognitoContext) {
+        sessionMode = 'incognito';
+    } else if (typeof browser !== 'undefined' && browser.extension && typeof browser.extension.isAllowedIncognitoAccess === 'function') {
+        const isPrivate = await browser.extension.isAllowedIncognitoAccess();
+        sessionMode = isPrivate ? 'private' : 'normal';
+    }
+})();
 
 function connectWebSocket() {
     if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
@@ -13,6 +24,11 @@ function connectWebSocket() {
     ws.onopen = () => {
         console.log("Connected to WebSocket server.");
         if (reconnectTimer) clearTimeout(reconnectTimer);
+
+        while (messageQueue.length > 0) {
+            const msg = messageQueue.shift();
+            try { ws.send(msg); } catch (e) { }
+        }
     };
 
     ws.onmessage = (event) => {
@@ -51,18 +67,26 @@ connectWebSocket();
 // Listen for messages from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "MEDIA_SESSION_UPDATE") {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            // Append tab ID to track multiple sessions
-            const payload = {
-                tabId: sender.tab ? sender.tab.id : 0,
-                active: sender.tab ? sender.tab.active : false,
-                mediaInfo: message.payload
-            };
+        const payload = {
+            tabId: sender.tab ? sender.tab.id : 0,
+            active: sender.tab ? sender.tab.active : false,
+            sessionMode: sessionMode,
+            mediaInfo: message.payload
+        };
 
+        const jsonStr = JSON.stringify({ type: "SESSION_UPDATE", data: payload });
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
             try {
-                ws.send(JSON.stringify({ type: "SESSION_UPDATE", data: payload }));
+                ws.send(jsonStr);
             } catch (err) {
                 console.error("Error posting to WebSocket:", err);
+            }
+        } else {
+            // Queue message if sleeping/connecting
+            messageQueue.push(jsonStr);
+            if (!ws || ws.readyState === WebSocket.CLOSED) {
+                connectWebSocket();
             }
         }
     }
@@ -71,20 +95,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Notify server when active tab changes, so it knows which session is currently active visually
 chrome.tabs.onActivated.addListener((activeInfo) => {
+    const jsonStr = JSON.stringify({ type: "ACTIVE_TAB_CHANGED", data: { tabId: activeInfo.tabId } });
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            type: "ACTIVE_TAB_CHANGED",
-            data: { tabId: activeInfo.tabId }
-        }));
+        ws.send(jsonStr);
+    } else {
+        messageQueue.push(jsonStr);
+        if (!ws || ws.readyState === WebSocket.CLOSED) connectWebSocket();
     }
 });
 
 // Notify server when a tab is closed, to remove the session
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    const jsonStr = JSON.stringify({ type: "TAB_CLOSED", data: { tabId: tabId } });
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            type: "TAB_CLOSED",
-            data: { tabId: tabId }
-        }));
+        ws.send(jsonStr);
+    } else {
+        messageQueue.push(jsonStr);
+        if (!ws || ws.readyState === WebSocket.CLOSED) connectWebSocket();
     }
 });

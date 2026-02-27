@@ -11,5 +11,6 @@ public record MediaInfo(
     string? Url = null,
     string? ArtworkUrl = null,
     TimeSpan? Duration = null,
-    TimeSpan? Position = null
+    TimeSpan? Position = null,
+    string SessionMode = "normal"
 );
